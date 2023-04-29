@@ -5,6 +5,8 @@ import { AppModule } from "../src/app.module";
 import { AuthDto } from "../src/auth/dto";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { EditUserDto } from "../src/user/dto";
+import { CreateBookmarkDto, EditBookmarkDto } from "../src/bookmark/dto";
+import { inspect } from "util";
 
 describe("App e2e", () => {
   let app: INestApplication;
@@ -36,7 +38,7 @@ describe("App e2e", () => {
     };
 
     describe("Sign up", () => {
-      it("Should throw an error when email is empty", () => {
+      it("Should throw an error when email is empty", async () => {
         return pactum
           .spec()
           .post("/auth/signup")
@@ -44,7 +46,7 @@ describe("App e2e", () => {
           .expectStatus(400);
       });
 
-      it("Should throw an error when password is empty", () => {
+      it("Should throw an error when password is empty", async () => {
         return pactum
           .spec()
           .post("/auth/signup")
@@ -52,7 +54,7 @@ describe("App e2e", () => {
           .expectStatus(400);
       });
 
-      it("Should throw an error if no request body provided", () => {
+      it("Should throw an error if no request body provided", async () => {
         return pactum
           .spec()
           .post("/auth/signup")
@@ -60,7 +62,7 @@ describe("App e2e", () => {
           .expectStatus(400);
       });
 
-      it("Should sign up", () => {
+      it("Should sign up", async () => {
         return pactum
           .spec()
           .post("/auth/signup")
@@ -70,7 +72,7 @@ describe("App e2e", () => {
     });
 
     describe("Sign in", () => {
-      it("Should throw an error when email is empty", () => {
+      it("Should throw an error when email is empty", async () => {
         return pactum
           .spec()
           .post("/auth/signin")
@@ -78,7 +80,7 @@ describe("App e2e", () => {
           .expectStatus(400);
       });
 
-      it("Should throw an error when password is empty", () => {
+      it("Should throw an error when password is empty", async () => {
         return pactum
           .spec()
           .post("/auth/signin")
@@ -86,7 +88,7 @@ describe("App e2e", () => {
           .expectStatus(400);
       });
 
-      it("Should throw an error if no request body provided", () => {
+      it("Should throw an error if no request body provided", async () => {
         return pactum
           .spec()
           .post("/auth/signin")
@@ -94,7 +96,7 @@ describe("App e2e", () => {
           .expectStatus(400);
       });
 
-      it("Should sign in", () => {
+      it("Should sign in", async () => {
         return pactum
           .spec()
           .post("/auth/signin")
@@ -107,7 +109,7 @@ describe("App e2e", () => {
 
   describe("User", () => {
     describe("Get current User", () => {
-      it("Should return user info", () => {
+      it("Should return user info", async () => {
         return pactum
           .spec()
           .get("/users/me")
@@ -120,23 +122,83 @@ describe("App e2e", () => {
         firstName: "firstName",
         lastName: "lastName",
       };
-      it("Should edit user email", () => {
+      it("Should edit user email", async () => {
         return pactum
           .spec()
           .patch("/users")
           .withHeaders({ Authorization: "Bearer $S{userAt}" })
           .withBody(dto)
-          .expectStatus(200)
-          .inspect();
+          .expectStatus(200);
       });
     });
   });
 
   describe("Bookmarks", () => {
-    describe("Create bookmarks", () => {});
-    describe("Get bookmarks", () => {});
-    describe("Get bookmark By Id", () => {});
-    describe("Edit bookmark", () => {});
-    describe("Delete bookmark", () => {});
+    describe("Create bookmarks", () => {
+      const dto: CreateBookmarkDto = {
+        title: "test title",
+        description: "optional description",
+        link: "http://example.com",
+      };
+
+      it("Should create a bookmark", async () => {
+        return pactum
+          .spec()
+          .post("/bookmarks")
+          .withHeaders({ Authorization: "Bearer $S{userAt}" })
+          .withBody(dto)
+          .expectStatus(201)
+          .stores("bookmarkId", "payload.bookmark.id");
+      });
+    });
+
+    describe("Get bookmarks", () => {
+      it("Should return bookmarks", async () => {
+        return pactum
+          .spec()
+          .get("/bookmarks")
+          .withHeaders({ Authorization: "Bearer $S{userAt}" })
+          .expectStatus(200);
+      });
+    });
+
+    describe("Get bookmark By Id", () => {
+      it("Should get a bookmark by id", async () => {
+        return pactum
+          .spec()
+          .get("/bookmarks/{id}")
+          .withPathParams("id", "$S{bookmarkId}")
+          .withHeaders({ Authorization: "Bearer $S{userAt}" })
+          .expectStatus(200);
+      });
+    });
+
+    describe("Edit bookmark", () => {
+      const dto: EditBookmarkDto = {
+        description: "Changed description",
+      };
+
+      it("Should edit a bookmark", async () => {
+        return pactum
+          .spec()
+          .patch("/bookmarks/{id}")
+          .withPathParams("id", "$S{bookmarkId}")
+          .withHeaders({ Authorization: "Bearer $S{userAt}" })
+          .withBody(dto)
+          .expectStatus(200)
+          .expectBodyContains(dto.description);
+      });
+    });
+
+    describe("Delete bookmark", () => {
+      it("Should delete a bookmark", async () => {
+        return pactum
+          .spec()
+          .delete("/bookmarks/{id}")
+          .withPathParams("id", "$S{bookmarkId}")
+          .withHeaders({ Authorization: "Bearer $S{userAt}" })
+          .expectStatus(204);
+      });
+    });
   });
 });
